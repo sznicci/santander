@@ -22,34 +22,39 @@ import org.json.simple.parser.ParseException;
 public class BikePointReadJsonJSONJava {
 
     static final String JSON_FILENAME = "G:\\ARU\\Modules\\Semester3_FinalProject\\Tasks\\000TaskFiles\\bikePointJSON\\BikePoint.json";
+    static final String SQL_INSERT_FOR_BIKE_POINTS = "INSERT INTO public.dock_station_info(\n" +
+                                                    "   id, common_name, capacity, latitude_longitude)\n   VALUES(";
 
-    public static void parse(String fileName) throws IOException {
+    public static void createSQLQueryForInsert(String fileName) throws IOException {
 
         try {
             JSONParser parser = new JSONParser();
             JSONArray jsonArray = (JSONArray) parser.parse(new FileReader(fileName));
 
-            for (Object o : jsonArray) {
-                JSONObject bikePoints = (JSONObject) o;
+            for (int i = 0; i < 500; i++) {
+                JSONObject bikePoints = (JSONObject) jsonArray.get(i);
 
                 // Json properties
                 String id = (String) bikePoints.get("id");
-                String url = (String) bikePoints.get("url");
-                String commonName;
-                String placeType;
+                String commonName = (String) bikePoints.get("commonName");
                 Double latitude = Double.parseDouble(bikePoints.get("lat").toString());
                 Double longitude = Double.parseDouble(bikePoints.get("lon").toString());
 
-                // Properties for Additional Properties
+                // Additional Properties
                 JSONArray addProp = (JSONArray) bikePoints.get("additionalProperties");
                 JSONObject element8 = (JSONObject) addProp.get(8);
-                String category = (String) element8.get("category");
-                String key = (String) element8.get("key");
-                String sourceSystemKey = (String) element8.get("sourceSystemKey");
                 Integer value = Integer.parseInt(element8.get("value").toString());
 
+                StringBuffer insertSqlStatement = new StringBuffer();
+                
+                insertSqlStatement.append(SQL_INSERT_FOR_BIKE_POINTS);
+                insertSqlStatement.append("default, ");
+                insertSqlStatement.append("\'").append(commonName.replaceAll("\\s+(?=,)", "")).append("\', ");
+                insertSqlStatement.append(value).append(", ");
+                insertSqlStatement.append("POINT(").append(latitude).append(", ").append(longitude).append(")");
+                insertSqlStatement.append(");");
 
-                System.out.println("bike: " + id + " " + url + " " + value + " lat " + latitude + " lon " + longitude);
+                System.out.println(insertSqlStatement);
             }
 
         } catch (FileNotFoundException ex) {
@@ -61,7 +66,7 @@ public class BikePointReadJsonJSONJava {
     }
 
     public static void main(String[] args) throws IOException {
-        parse(JSON_FILENAME);
+        createSQLQueryForInsert(JSON_FILENAME);
     }
 
 }
