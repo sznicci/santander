@@ -30,11 +30,11 @@ public class BikePointReadJsonJSONJava {
             + "   common_name, capacity, latitude_longitude)\n"
             + "VALUES(?, ?, ?);";
 
-    public static void createSQLQueryForInsert(String fileName) throws IOException {
+    public static void insertBikePointsIntoDockStationInfoTable(String fileName) throws IOException {
 
         DBConnection dbConn = new DBConnection();
         Connection conn = dbConn.connect();
-        PreparedStatement ps = null;
+        PreparedStatement ps;
 
         try {
             JSONParser parser = new JSONParser();
@@ -44,10 +44,7 @@ public class BikePointReadJsonJSONJava {
                 JSONObject bikePoints = (JSONObject) jsonArray.get(i);
 
                 // Json properties
-//                String id = (String) bikePoints.get("id");
                 String commonName = (String) bikePoints.get("commonName");
-//                commonName = commonName.replaceAll("\\s+(?=')", "\''");
-//                commonName = commonName.replaceAll("\\s+(?=,)", "");
                 Double latitude = Double.parseDouble(bikePoints.get("lat").toString());
                 Double longitude = Double.parseDouble(bikePoints.get("lon").toString());
 
@@ -56,7 +53,6 @@ public class BikePointReadJsonJSONJava {
                 JSONObject element8 = (JSONObject) addProp.get(8);
                 Integer value = Integer.parseInt(element8.get("value").toString());
 
-//                conn.insertIntoUsage(insertSqlStatement.toString());
                 ps = insertBikePoints(conn, SQL_INSERT_FOR_BIKE_POINTS, commonName, value, latitude, longitude);
                 
                 ps.addBatch();
@@ -81,12 +77,10 @@ public class BikePointReadJsonJSONJava {
         try {
             statement = conn.prepareStatement(SQL);
 
-//            statement.setObject(1, "default");
             statement.setString(1, commonName);
             statement.setInt(2, value);
             statement.setObject(3, latLon);
 
-//            System.out.println("query: " + statement);
         } catch (SQLException ex) {
             Logger.getLogger(BikePointReadJsonJSONJava.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -95,7 +89,9 @@ public class BikePointReadJsonJSONJava {
     }
 
     public static void main(String[] args) throws IOException {
-        createSQLQueryForInsert(JSON_FILENAME);
+        
+        insertBikePointsIntoDockStationInfoTable(JSON_FILENAME);
+        
     }
 
 }
