@@ -26,14 +26,15 @@ import org.postgresql.geometric.PGpoint;
 public class BikePointReadJsonJSONJava {
 
     static final String JSON_FILENAME = "G:\\ARU\\Modules\\Semester3_FinalProject\\Tasks\\000TaskFiles\\bikePointJSON\\BikePoint.json";
-    static final String SQL_INSERT_FOR_BIKE_POINTS = "INSERT INTO public.dock_station_info(\n" +
-                                                    "   common_name, capacity, latitude_longitude)\n"
-                                                    + "VALUES(?, ?, ?);";
+    static final String SQL_INSERT_FOR_BIKE_POINTS = "INSERT INTO public.dock_station_info(\n"
+            + "   common_name, capacity, latitude_longitude)\n"
+            + "VALUES(?, ?, ?);";
 
     public static void createSQLQueryForInsert(String fileName) throws IOException {
-        
+
         DBConnection dbConn = new DBConnection();
         Connection conn = dbConn.connect();
+        PreparedStatement ps = null;
 
         try {
             JSONParser parser = new JSONParser();
@@ -55,49 +56,42 @@ public class BikePointReadJsonJSONJava {
                 JSONObject element8 = (JSONObject) addProp.get(8);
                 Integer value = Integer.parseInt(element8.get("value").toString());
 
-//                StringBuffer insertSqlStatement = new StringBuffer();
-//                
-//                insertSqlStatement.append(SQL_INSERT_FOR_BIKE_POINTS);
-//                insertSqlStatement.append("default, ");
-//                insertSqlStatement.append("\'").append(commonName).append("\', ");
-//                insertSqlStatement.append(value).append(", ");
-//                insertSqlStatement.append("POINT(").append(latitude).append(", ").append(longitude).append(")");
-//                insertSqlStatement.append(");");
-
 //                conn.insertIntoUsage(insertSqlStatement.toString());
-//                System.out.println(insertSqlStatement);
-
-                  insertBikePoints(conn, SQL_INSERT_FOR_BIKE_POINTS, commonName, value, latitude, longitude);
+                ps = insertBikePoints(conn, SQL_INSERT_FOR_BIKE_POINTS, commonName, value, latitude, longitude);
+                
+                ps.addBatch();
+                ps.executeBatch();
             }
 
         } catch (FileNotFoundException ex) {
             Logger.getLogger(BikePointReadJsonJSONJava.class.getName()).log(Level.SEVERE, null, ex);
         } catch (ParseException ex) {
             Logger.getLogger(BikePointReadJsonJSONJava.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (SQLException ex) {
+            Logger.getLogger(BikePointReadJsonJSONJava.class.getName()).log(Level.SEVERE, null, ex);
         }
 
     }
-    
-    private static void insertBikePoints(Connection conn, String SQL, String commonName, Integer value, Double latitude, Double longitude) {
+
+    private static PreparedStatement insertBikePoints(Connection conn, String SQL, String commonName, Integer value, Double latitude, Double longitude) {
         PreparedStatement statement = null;
-        
+
         PGpoint latLon = new PGpoint(latitude, longitude);
-        
+
         try {
             statement = conn.prepareStatement(SQL);
-            
+
 //            statement.setObject(1, "default");
             statement.setString(1, commonName);
             statement.setInt(2, value);
             statement.setObject(3, latLon);
-            
+
 //            System.out.println("query: " + statement);
-            
         } catch (SQLException ex) {
             Logger.getLogger(BikePointReadJsonJSONJava.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
-        
+
+        return statement;
     }
 
     public static void main(String[] args) throws IOException {
