@@ -33,19 +33,21 @@ public class JourneyDataCsvFileRead {
 //    static final String SQL_INSERT_FOR_JOURNEY_DATA = "INSERT INTO public.usage(\n"
 //            + "bikeId, date, start_time, end_time, start_station_id, end_station_id)\n"
 //            + "VALUES (?, ?, ?, ?, ?, ?);";
-    
+
     /**
      * Generate full path for CSV file
-     * 
+     *
      * @return - Full path for selected CSV file
      */
     private static String getCsvFileFullPath() {
         Scanner scanner = new Scanner(System.in);
+        System.out.println("Please, type in the folder name and file name of the preferred CSV file.\n"
+                + "Example input for April to June: \'april-june\\\\52JourneyDataExtract05Apr2017-11Apr2017.csv\'");
         String fileName = scanner.nextLine();
-        
+
         return CSV_PATH + fileName;
     }
-    
+
     /**
      * Generate SQL statement for creating usage tables for selected quarters
      *
@@ -63,17 +65,18 @@ public class JourneyDataCsvFileRead {
                 + "end_station_id int "
                 + ");";
     }
-    
+
     /**
-     * Generate SQL insert statement for inserting data into selected quarter table
-     * 
+     * Generate SQL insert statement for inserting data into selected quarter
+     * table
+     *
      * @param quarterNumber - represents the quarter in the year. E.g.: 1 -> Q1
      * @return - SQL statement for inserting into a table as a String.
      */
     private static String sqlInsertForJourneyData(int quarterNumber) {
         return "INSERT INTO public.usageQ" + quarterNumber + "(\n"
-            + "bikeId, date, start_time, end_time, start_station_id, end_station_id)\n"
-            + "VALUES (?, ?, ?, ?, ?, ?);";
+                + "bikeId, date, start_time, end_time, start_station_id, end_station_id)\n"
+                + "VALUES (?, ?, ?, ?, ?, ?);";
     }
 
     protected static void insertIntoUsageTable(String fileName, int quarterNumber) {
@@ -167,8 +170,14 @@ public class JourneyDataCsvFileRead {
 
     public static void main(String[] args) throws IOException {
 
-        insertIntoUsageTable(CSV_PATH);
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Please, select a quarter (e.g.: 1, 2, 3 or 4): ");
+        int quarter;
+        if ((quarter = scanner.nextInt()) < 1 || quarter > 4) {
+            throw new IllegalArgumentException("Selected number is not in range of 1 to 4. It must be 1, 2, 3 or 4.");
+        }
 
+        insertIntoUsageTable(CSV_PATH, quarter);
     }
 
 }
