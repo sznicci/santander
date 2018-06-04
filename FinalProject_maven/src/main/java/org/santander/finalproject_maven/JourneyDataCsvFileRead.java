@@ -11,6 +11,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Time;
+import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.supercsv.cellprocessor.ParseDate;
@@ -28,18 +29,30 @@ import org.supercsv.prefs.CsvPreference;
  */
 public class JourneyDataCsvFileRead {
 
-    static final String CSV_FILENAME = "G:\\ARU\\Modules\\Semester3_FinalProject\\Tasks\\000TaskFiles\\csvFile\\JourneyDataExtract01Jan1503Jan15.csv";
-    static final String SQL_INSERT_FOR_JOURNEY_DATA = "INSERT INTO public.usage(\n"
-            + "bikeId, date, start_time, end_time, start_station_id, end_station_id)\n"
-            + "VALUES (?, ?, ?, ?, ?, ?);";
+    static final String CSV_PATH = "K:\\NikolettaSzedljak\\finalProject\\preparingData\\santander\\dataCSVFiles\\2017\\";
+//    static final String SQL_INSERT_FOR_JOURNEY_DATA = "INSERT INTO public.usage(\n"
+//            + "bikeId, date, start_time, end_time, start_station_id, end_station_id)\n"
+//            + "VALUES (?, ?, ?, ?, ?, ?);";
+    
+    /**
+     * Generate full path for CSV file
+     * 
+     * @return - Full path for selected CSV file
+     */
+    private static String getCsvFileFullPath() {
+        Scanner scanner = new Scanner(System.in);
+        String fileName = scanner.nextLine();
+        
+        return CSV_PATH + fileName;
+    }
     
     /**
      * Generate SQL statement for creating usage tables for selected quarters
-     * 
+     *
      * @param quarterNumber - represents the quarter in the year. E.g.: 1 -> Q1
-     * @return - SQL statement as a String.
+     * @return - SQL statement for creating a table as a String.
      */
-    protected static String sqlStatementForCreateTables(int quarterNumber) {
+    private static String sqlStatementForCreateTables(int quarterNumber) {
         return "CREATE TABLE usageQ" + quarterNumber + " ( "
                 + "id serial PRIMARY KEY, "
                 + "bikeId int, "
@@ -50,14 +63,27 @@ public class JourneyDataCsvFileRead {
                 + "end_station_id int "
                 + ");";
     }
+    
+    /**
+     * Generate SQL insert statement for inserting data into selected quarter table
+     * 
+     * @param quarterNumber - represents the quarter in the year. E.g.: 1 -> Q1
+     * @return - SQL statement for inserting into a table as a String.
+     */
+    private static String sqlInsertForJourneyData(int quarterNumber) {
+        return "INSERT INTO public.usageQ" + quarterNumber + "(\n"
+            + "bikeId, date, start_time, end_time, start_station_id, end_station_id)\n"
+            + "VALUES (?, ?, ?, ?, ?, ?);";
+    }
 
-    protected static void insertIntoUsageTable(String fileName) {
+    protected static void insertIntoUsageTable(String fileName, int quarterNumber) {
 
         DBConnection dbConn = new DBConnection();
         Connection conn = dbConn.connect();
+        String file = getCsvFileFullPath();
         PreparedStatement ps;
 
-        try (ICsvBeanReader beanReader = new CsvBeanReader(new FileReader(CSV_FILENAME), CsvPreference.STANDARD_PREFERENCE)) {
+        try (ICsvBeanReader beanReader = new CsvBeanReader(new FileReader(file), CsvPreference.STANDARD_PREFERENCE)) {
 
             // Define headers for csv file because they do not match with JourneyDataBean fields
             final String[] headers = new String[]{"rentalId", "duration", "bikeId",
@@ -81,7 +107,7 @@ public class JourneyDataCsvFileRead {
                 usage.setBikeId(journeyData.getBikeId());
 
                 // Create SQL statement
-                ps = insertStatementForUsageTable(conn, SQL_INSERT_FOR_JOURNEY_DATA, usage);
+                ps = insertStatementForUsageTable(conn, sqlInsertForJourneyData(quarterNumber), usage);
 
                 // Insert into database
                 ps.addBatch();
@@ -140,9 +166,8 @@ public class JourneyDataCsvFileRead {
     }
 
     public static void main(String[] args) throws IOException {
-        
 
-        insertIntoUsageTable(CSV_FILENAME);
+        insertIntoUsageTable(CSV_PATH);
 
     }
 
