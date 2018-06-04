@@ -19,6 +19,7 @@ public class UsageBean implements Serializable {
      * Attributes
      */
     private Integer usageId;
+    private Integer bikeId;
     private Date date;
     private Time startTime;
     private Time endTime;
@@ -41,6 +42,10 @@ public class UsageBean implements Serializable {
         return usageId;
     }
 
+    public Integer getBikeId() {
+        return bikeId;
+    }
+    
     public Date getDate() {
         return date;
     }
@@ -65,6 +70,10 @@ public class UsageBean implements Serializable {
         this.usageId = usageId;
     }
 
+    public void setBikeId(Integer bikeId) {
+        this.bikeId = bikeId;
+    }
+    
     public void setDate(Date date) {
         this.date = date;
     }

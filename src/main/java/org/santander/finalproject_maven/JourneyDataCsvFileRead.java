@@ -32,8 +32,8 @@ public class JourneyDataCsvFileRead {
 
     static final String CSV_FILENAME = "G:\\ARU\\Modules\\Semester3_FinalProject\\Tasks\\000TaskFiles\\csvFile\\JourneyDataExtract01Jan1503Jan15.csv";
     static final String SQL_INSERT_FOR_JOURNEY_DATA = "INSERT INTO public.usage(\n"
-            + "date, start_time, end_time, start_station_id, end_station_id)\n"
-            + "VALUES (?, ?, ?, ?, ?);";
+            + "bikeId, date, start_time, end_time, start_station_id, end_station_id)\n"
+            + "VALUES (?, ?, ?, ?, ?, ?);";
 
     protected static void insertIntoUsageTable(String fileName) {
 
@@ -62,6 +62,7 @@ public class JourneyDataCsvFileRead {
                 startTime = journeyData.getStartDate().getTime();
                 usage.setStartTime(new Time(startTime));
                 usage.setStartStationId(journeyData.getStartStationId());
+                usage.setBikeId(journeyData.getBikeId());
 
                 // Create SQL statement
                 ps = insertStatementForUsageTable(conn, SQL_INSERT_FOR_JOURNEY_DATA, usage);
@@ -89,11 +90,12 @@ public class JourneyDataCsvFileRead {
         try {
             statement = conn.prepareStatement(SQL);
 
-            statement.setDate(1, usage.getDate());
-            statement.setTime(2, usage.getStartTime());
-            statement.setTime(3, usage.getEndTime());
-            statement.setInt(4, usage.getStartStationId());
-            statement.setInt(5, usage.getEndStationId());
+            statement.setInt(1, usage.getBikeId());
+            statement.setDate(2, usage.getDate());
+            statement.setTime(3, usage.getStartTime());
+            statement.setTime(4, usage.getEndTime());
+            statement.setInt(5, usage.getStartStationId());
+            statement.setInt(6, usage.getEndStationId());
 
         } catch (SQLException ex) {
             Logger.getLogger(BikePointReadJsonJSONJava.class.getName()).log(Level.SEVERE, null, ex);
