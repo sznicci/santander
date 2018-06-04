@@ -11,8 +11,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Time;
-import java.sql.Timestamp;
-import java.time.LocalTime;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.supercsv.cellprocessor.ParseDate;
@@ -34,6 +32,24 @@ public class JourneyDataCsvFileRead {
     static final String SQL_INSERT_FOR_JOURNEY_DATA = "INSERT INTO public.usage(\n"
             + "bikeId, date, start_time, end_time, start_station_id, end_station_id)\n"
             + "VALUES (?, ?, ?, ?, ?, ?);";
+    
+    /**
+     * Generate SQL statement for creating usage tables for selected quarters
+     * 
+     * @param quarterNumber - represents the quarter in the year. E.g.: 1 -> Q1
+     * @return - SQL statement as a String.
+     */
+    protected static String sqlStatementForCreateTables(int quarterNumber) {
+        return "CREATE TABLE usageQ" + quarterNumber + " ( "
+                + "id serial PRIMARY KEY, "
+                + "bikeId int, "
+                + "date date, "
+                + "start_time time, "
+                + "end_time time, "
+                + "start_station_id int, "
+                + "end_station_id int "
+                + ");";
+    }
 
     protected static void insertIntoUsageTable(String fileName) {
 
@@ -124,6 +140,7 @@ public class JourneyDataCsvFileRead {
     }
 
     public static void main(String[] args) throws IOException {
+        
 
         insertIntoUsageTable(CSV_FILENAME);
 

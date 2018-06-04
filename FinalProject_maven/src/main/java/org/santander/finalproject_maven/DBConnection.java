@@ -9,6 +9,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -72,6 +73,24 @@ public class DBConnection {
                 e.printStackTrace();
             }
         }
+    }
+
+    /**
+     * Create table
+     */
+    protected void createTable(String sql) {
+        Connection conn = connect();
+        Statement statement = null;
+
+        try {
+            statement = conn.createStatement();
+            statement.executeUpdate(sql);
+            statement.close();
+            conn.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(DBConnection.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
     }
 //
 //    public static void main(String[] args) {
