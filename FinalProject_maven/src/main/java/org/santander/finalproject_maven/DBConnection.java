@@ -7,11 +7,7 @@ package org.santander.finalproject_maven;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -43,58 +39,4 @@ public class DBConnection {
         return conn;
     }
 
-    /**
-     * Insert data into Usage table
-     *
-     * @param SQL statement to be inserted
-     */
-    protected void insertIntoUsage(String SQL) {
-        Connection conn = connect();
-        PreparedStatement statement = null;
-
-        try {
-            statement = conn.prepareStatement(SQL);
-
-            statement.addBatch();
-            statement.executeBatch();
-        } catch (SQLException ex) {
-            Logger.getLogger(DBConnection.class.getName()).log(Level.SEVERE, null, ex);
-        } finally {
-            try {
-
-                // Step 5 Close connection
-                if (statement != null) {
-                    statement.close();
-                }
-                if (conn != null) {
-                    conn.close();
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    /**
-     * Create table
-     */
-    protected void createTable(String sql) {
-        Connection conn = connect();
-        Statement statement = null;
-
-        try {
-            statement = conn.createStatement();
-            statement.executeUpdate(sql);
-            statement.close();
-            conn.close();
-        } catch (SQLException ex) {
-            Logger.getLogger(DBConnection.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-    }
-//
-//    public static void main(String[] args) {
-//        DBConnection app = new DBConnection();
-////        app.insertIntoUsage(SQL);
-//    }
 }

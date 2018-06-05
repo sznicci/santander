@@ -40,6 +40,30 @@ public class JourneyDataBean {
         this.startStationId = startStationId;
         this.startStationName = startStationName;
     }
+    
+    public boolean isComplete() {
+        if (this.rentalId == null) {
+            return false;
+        } else if (this.duration == null) {
+            return false;
+        } else if (this.bikeId == null) {
+            return false;
+        } else if (this.endDate == null) {
+            return false;
+        } else if (this.endStationId == null) {
+            return false;
+        } else if (this.endStationName == null || this.endStationName.isEmpty()) {
+            return false;
+        } else if (this.startDate == null) {
+            return false;
+        } else if (this.startStationId == null) {
+            return false;
+        } else if (this.startStationName == null || this.startStationName.isEmpty()) {
+            return false;
+        } else {
+            return true;
+        }
+    }
 
     public Integer getRentalId() {
         return rentalId;
