@@ -6,7 +6,6 @@
 package org.santander.finalproject_maven;
 
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.logging.Level;
@@ -21,7 +20,7 @@ public class FileNamesReader {
     public static void main(String args[]) {
         try {
             BufferedReader br = new BufferedReader(new FileReader("K:\\NikolettaSzedljak\\finalProject\\preparingData\\santander\\dataCSVFiles\\2017\\jan-mar\\filenames.txt"));
-            String line = null;
+            String line;
             
             while ((line = br.readLine()) != null) {
                 System.out.println("jan-mar\\\\" + line);
