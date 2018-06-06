@@ -6,8 +6,12 @@
 package org.santander.finalproject_maven;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -37,6 +41,29 @@ public class DBConnection {
         }
 
         return conn;
+    }
+    
+    /**
+     * Checks whether a table exists in the database or not
+     *
+     * @param conn - database connection
+     * @param tableName - table name to check
+     * @return - true if table exists, false otherwise
+     */
+    protected static boolean hasTable(Connection conn, String tableName) {
+        try {
+            DatabaseMetaData dbm = conn.getMetaData();
+            try (ResultSet rs = dbm.getTables(null, null, tableName, null)) {
+                if (rs.next()) {
+                    return true;
+                }
+            }
+
+        } catch (SQLException ex) {
+            Logger.getLogger(JourneyDataCsvFileRead.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        return false;
     }
 
 }
