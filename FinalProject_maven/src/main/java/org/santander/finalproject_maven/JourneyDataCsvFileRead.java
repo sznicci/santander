@@ -121,7 +121,7 @@ public class JourneyDataCsvFileRead {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            Logger.getLogger(FileNamesReader.class.getName()).log(Level.SEVERE, null, e);
         }
 
     }
