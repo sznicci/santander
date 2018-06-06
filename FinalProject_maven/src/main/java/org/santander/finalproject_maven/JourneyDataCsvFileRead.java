@@ -9,12 +9,11 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Time;
+import java.sql.Timestamp;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -33,21 +32,7 @@ import org.supercsv.prefs.CsvPreference;
  */
 public class JourneyDataCsvFileRead {
 
-    static final String CSV_PATH = "K:\\NikolettaSzedljak\\finalProject\\preparingData\\santander\\dataCSVFiles\\2017\\";
-
-    /**
-     * Generate full path for CSV file
-     *
-     * @return - Full path for selected CSV file
-     */
-    private static String getCsvFileFullPath() {
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("Please, type in the folder name and file name of the preferred CSV file.\n"
-                + "Example input for April to June: \'april-june\\\\52JourneyDataExtract05Apr2017-11Apr2017.csv\'");
-        String fileName = scanner.nextLine();
-
-        return CSV_PATH + fileName;
-    }
+    static final String CSV_PATH = "K:\\NikolettaSzedljak\\finalProject\\preparingData\\santander\\dataFiles\\2017\\";
 
     /**
      * Generate SQL statement for creating usage tables for selected quarters
@@ -75,60 +60,27 @@ public class JourneyDataCsvFileRead {
      * @return - SQL statement for inserting into a table as a String.
      */
     private static String sqlInsertForJourneyData(int quarterNumber) {
-        return "INSERT INTO public.usageQ" + quarterNumber + "(\n"
+        return "INSERT INTO public.usageq" + quarterNumber + "(\n"
                 + "bikeId, date, start_time, end_time, start_station_id, end_station_id)\n"
                 + "VALUES (?, ?, ?, ?, ?, ?);";
     }
 
     /**
-     * Checks whether a table exists in the database or not
+     * Prepare an insert statement and will execute the query.
      *
      * @param conn - database connection
+     * @param path - path for the CSV file
      * @param quarterNumber - represents the quarter in the year. E.g.: 1 -> Q1
-     * @return - true if table exists, false otherwise
      */
-    private static boolean hasTable(Connection conn, int quarterNumber) {
-        try {
-            String tableName = "usageq" + quarterNumber;
-            DatabaseMetaData dbm = conn.getMetaData();
-            ResultSet rs = dbm.getTables(null, null, tableName, null);
+    protected static void insertIntoUsageTable(Connection conn, String path, int quarterNumber) {
 
-            if (rs.next()) {
-                return true;
-            } else {
-                return false;
-            }
-        } catch (SQLException ex) {
-            Logger.getLogger(JourneyDataCsvFileRead.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-        return false;
-    }
-
-    protected static void insertIntoUsageTable(String path, int quarterNumber) {
-
-        DBConnection dbConn = new DBConnection();
-        Connection conn = dbConn.connect();
-//        String file = getCsvFileFullPath();
-        PreparedStatement ps;
-
-        if (!hasTable(conn, quarterNumber)) {
-            Statement statement = null;
-
-            try {
-                statement = conn.createStatement();
-                statement.executeUpdate(sqlStatementForCreateTables(quarterNumber));
-                statement.close();
-            } catch (SQLException ex) {
-                Logger.getLogger(DBConnection.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
-
-        try (ICsvBeanReader beanReader = new CsvBeanReader(new FileReader(path), CsvPreference.STANDARD_PREFERENCE)) {
+        try (
+                PreparedStatement ps = conn.prepareStatement(sqlInsertForJourneyData(quarterNumber));
+                ICsvBeanReader beanReader = new CsvBeanReader(new FileReader(path), CsvPreference.STANDARD_PREFERENCE)) {
 
             // Skip the defined header if it exists
             beanReader.getHeader(true);
-            
+
             // Define headers for csv file because they do not match with JourneyDataBean fields
             final String[] headers = new String[]{"rentalId", "duration", "bikeId",
                 "endDate", "endStationId", "endStationName", "startDate", "startStationId", "startStationName"};
@@ -138,13 +90,12 @@ public class JourneyDataCsvFileRead {
             UsageBean usage = new UsageBean();
             long endTime, startTime;
 
-//            int i = 0;
             while ((journeyData = beanReader.read(JourneyDataBean.class, headers, processors)) != null) {
                 // Check whether there is an incomplete record
                 if (!journeyData.isComplete()) {
                     continue;
                 }
-                
+
                 // Set fields for usage
                 usage.setDate(new java.sql.Date(journeyData.getStartDate().getTime()));
                 endTime = journeyData.getEndDate().getTime();
@@ -156,13 +107,17 @@ public class JourneyDataCsvFileRead {
                 usage.setBikeId(journeyData.getBikeId());
 
                 // Create SQL statement
-                ps = insertStatementForUsageTable(conn, sqlInsertForJourneyData(quarterNumber), usage);
+                ps.setInt(1, usage.getBikeId());
+                ps.setDate(2, usage.getDate());
+                ps.setTime(3, usage.getStartTime());
+                ps.setTime(4, usage.getEndTime());
+                ps.setInt(5, usage.getStartStationId());
+                ps.setInt(6, usage.getEndStationId());
 
                 // Insert into database
                 ps.addBatch();
                 ps.executeBatch();
 
-//                i++;
             }
 
         } catch (Exception e) {
@@ -172,31 +127,7 @@ public class JourneyDataCsvFileRead {
     }
 
     /**
-     * Create SQL insert statement
-     */
-    private static PreparedStatement insertStatementForUsageTable(Connection conn, String SQL, UsageBean usage) {
-
-        PreparedStatement statement = null;
-
-        try {
-            statement = conn.prepareStatement(SQL);
-
-            statement.setInt(1, usage.getBikeId());
-            statement.setDate(2, usage.getDate());
-            statement.setTime(3, usage.getStartTime());
-            statement.setTime(4, usage.getEndTime());
-            statement.setInt(5, usage.getStartStationId());
-            statement.setInt(6, usage.getEndStationId());
-
-        } catch (SQLException ex) {
-            Logger.getLogger(BikePointReadJsonJSONJava.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-        return statement;
-    }
-
-    /**
-     * Sets up the processors.
+     * Sets up the processors for the usage tables.
      */
     private static CellProcessor[] getProcessors() {
 
@@ -222,21 +153,38 @@ public class JourneyDataCsvFileRead {
         if ((quarter = scanner.nextInt()) < 1 || quarter > 4) {
             throw new IllegalArgumentException("Selected number is not in range of 1 to 4. It must be 1, 2, 3 or 4.");
         }
-        
-        try {
-            BufferedReader br = new BufferedReader(new FileReader("K:\\NikolettaSzedljak\\finalProject\\preparingData\\santander\\dataCSVFiles\\2017\\jul-sept\\filenames.txt"));
-            String line = null;
-            String path = null;
-            
+
+        // Set up database connection
+        DBConnection dbConn = new DBConnection();
+        Connection conn = dbConn.connect();
+
+        // Check wheter there is a table in the database for the selected quarter or not
+        if (!DBConnection.hasTable(conn, "usageq" + quarter)) {
+
+            try (Statement statement = conn.createStatement()) {
+                statement.executeUpdate(sqlStatementForCreateTables(quarter));
+            } catch (SQLException ex) {
+                Logger.getLogger(DBConnection.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+
+        // Read all the file names from a file and call the insert method with each CSV file
+        try (
+                BufferedReader br
+                = new BufferedReader(new FileReader("K:\\NikolettaSzedljak\\finalProject\\preparingData\\santander\\dataFiles\\2017\\oct-dec\\filenames.txt"))) {
+
+            String line;
+            String path;
+
             while ((line = br.readLine()) != null) {
-                path = "jul-sept\\\\" + line;
-                insertIntoUsageTable(CSV_PATH + path, quarter);
-                System.out.println("Done " + path);
+                path = "oct-dec\\\\" + line;
+                insertIntoUsageTable(conn, CSV_PATH + path, quarter);
+                System.out.println("Done " + path + " time " + new Timestamp(System.currentTimeMillis()));
             }
         } catch (IOException ex) {
             Logger.getLogger(FileNamesReader.class.getName()).log(Level.SEVERE, null, ex);
         }
-//        insertIntoUsageTable(quarter);
+
     }
 
 }
