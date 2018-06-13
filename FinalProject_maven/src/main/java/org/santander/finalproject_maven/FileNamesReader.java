@@ -13,7 +13,7 @@ import java.util.logging.Logger;
 
 /**
  *
- * @author Research
+ * @author sznicci
  */
 public class FileNamesReader {
     
