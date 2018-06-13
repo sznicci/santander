@@ -15,7 +15,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
