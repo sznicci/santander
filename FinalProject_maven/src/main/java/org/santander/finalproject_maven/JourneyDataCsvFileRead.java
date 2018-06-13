@@ -9,11 +9,13 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -66,6 +68,47 @@ public class JourneyDataCsvFileRead {
     }
 
     /**
+     * Check whether the file has a header row or not
+     *
+     * @param path - file path
+     * @return - true if it has a header, false if does not have a header row
+     */
+    private static boolean hasHeader(String path) {
+        try (ICsvBeanReader beanReader = new CsvBeanReader(new FileReader(path), CsvPreference.STANDARD_PREFERENCE)) {
+            if (beanReader.getHeader(true)[0].equals("Rental Id")) {
+                return true;
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(JourneyDataCsvFileRead.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        return false;
+    }
+
+    /**
+     * Modifies the date if the year format is 0YYY and not 2YYY. (E.g. 0016 and
+     * not 2016)
+     *
+     * @param date - original date
+     * @return - new date in the format of 2YYY if the original date was in the
+     * format of 0YYY. Otherwise returns with the original date.
+     */
+    private static Date getYear(Date date) {
+        String dateString = date.toString();
+        String newDateString;
+        Date newDate;
+
+        if (dateString.charAt(0) == '0') {
+            newDateString = dateString.replaceFirst("0", "2");
+            newDate = Date.valueOf(newDateString);
+
+            return newDate;
+        }
+
+        return date;
+    }
+
+    /**
      * Prepare an insert statement and will execute the query.
      *
      * @param conn - database connection
@@ -79,7 +122,9 @@ public class JourneyDataCsvFileRead {
                 ICsvBeanReader beanReader = new CsvBeanReader(new FileReader(path), CsvPreference.STANDARD_PREFERENCE)) {
 
             // Skip the defined header if it exists
-            beanReader.getHeader(true);
+            if (hasHeader(path)) {
+                beanReader.getHeader(true);
+            }
 
             // Define headers for csv file because they do not match with JourneyDataBean fields
             final String[] headers = new String[]{"rentalId", "duration", "bikeId",
@@ -97,7 +142,7 @@ public class JourneyDataCsvFileRead {
                 }
 
                 // Set fields for usage
-                usage.setDate(new java.sql.Date(journeyData.getStartDate().getTime()));
+                usage.setDate(getYear(new java.sql.Date(journeyData.getStartDate().getTime())));
                 endTime = journeyData.getEndDate().getTime();
                 usage.setEndTime(new Time(endTime));
                 usage.setEndStationId(journeyData.getEndStationId());
@@ -171,13 +216,13 @@ public class JourneyDataCsvFileRead {
         // Read all the file names from a file and call the insert method with each CSV file
         try (
                 BufferedReader br
-                = new BufferedReader(new FileReader("K:\\NikolettaSzedljak\\finalProject\\preparingData\\santander\\dataFiles\\2017\\oct-dec\\filenames.txt"))) {
+                = new BufferedReader(new FileReader("K:\\NikolettaSzedljak\\finalProject\\preparingData\\santander\\dataFiles\\2017\\jan-mar\\filenames.txt"))) {
 
             String line;
             String path;
 
             while ((line = br.readLine()) != null) {
-                path = "oct-dec\\\\" + line;
+                path = "jan-mar\\\\" + line;
                 insertIntoUsageTable(conn, CSV_PATH + path, quarter);
                 System.out.println("Done " + path + " time " + new Timestamp(System.currentTimeMillis()));
             }
