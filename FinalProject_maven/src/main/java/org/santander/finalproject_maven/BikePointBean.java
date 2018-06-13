@@ -15,6 +15,7 @@ public class BikePointBean {
      * Fields
      */
     private String id;
+    private Integer stationId;
     private String url;
     private String commonName;
     private String placeType;
@@ -25,8 +26,9 @@ public class BikePointBean {
     public BikePointBean() {
     }
 
-    public BikePointBean(String id, String url, String commonName, String placeType, AdditionalProperties additionalProperties, Double latitude, Double longitude) {
+    public BikePointBean(String id, Integer stationId, String url, String commonName, String placeType, AdditionalProperties additionalProperties, Double latitude, Double longitude) {
         this.id = id;
+        this.stationId = stationId;
         this.url = url;
         this.commonName = commonName;
         this.placeType = placeType;
@@ -37,6 +39,10 @@ public class BikePointBean {
 
     public String getId() {
         return id;
+    }
+
+    public Integer getStationId() {
+        return stationId;
     }
 
     public String getUrl() {
@@ -65,6 +71,10 @@ public class BikePointBean {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public void setStationId(Integer stationId) {
+        this.stationId = stationId;
     }
 
     public void setUrl(String url) {

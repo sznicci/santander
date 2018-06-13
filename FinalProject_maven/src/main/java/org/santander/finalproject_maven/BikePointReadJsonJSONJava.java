@@ -27,10 +27,11 @@ public class BikePointReadJsonJSONJava {
 
     static final String JSON_FILENAME = "K:\\NikolettaSzedljak\\finalProject\\preparingData\\santander\\dataFiles\\jsonBikePoints\\BikePoint.json";
     static final String SQL_INSERT_FOR_BIKE_POINTS = "INSERT INTO public.dock_station_info(\n"
-            + "   common_name, capacity, latitude, longitude)\n"
-            + "VALUES(?, ?, ?, ?);";
+            + "   station_id, common_name, capacity, latitude, longitude)\n"
+            + "VALUES(?, ?, ?, ?, ?);";
     static final String SQL_CREATE_FOR_BIKE_POINTS = "CREATE TABLE dock_station_info(\n"
             + "id serial PRIMARY KEY, "
+            + "station_id integer, "
             + "common_name varchar(100), "
             + "capacity integer, "
             + "latitude varchar(30), "
@@ -46,6 +47,7 @@ public class BikePointReadJsonJSONJava {
                 JSONObject bikePoints = (JSONObject) jsonArray.get(i);
 
                 // Json properties
+                String stationId = ((String) bikePoints.get("id")).replaceAll("BikePoints_", "");
                 String commonName = (String) bikePoints.get("commonName");
                 String latitude = bikePoints.get("lat").toString();
                 String longitude = bikePoints.get("lon").toString();
@@ -55,10 +57,11 @@ public class BikePointReadJsonJSONJava {
                 JSONObject element8 = (JSONObject) addProp.get(8);
                 Integer value = Integer.parseInt(element8.get("value").toString());
 
-                ps.setString(1, commonName);
-                ps.setInt(2, value);
-                ps.setString(3, latitude);
-                ps.setString(4, longitude);
+                ps.setInt(1, Integer.parseInt(stationId));
+                ps.setString(2, commonName);
+                ps.setInt(3, value);
+                ps.setString(4, latitude);
+                ps.setString(5, longitude);
 
                 ps.addBatch();
                 ps.executeBatch();
