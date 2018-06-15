@@ -42,7 +42,7 @@ public class JourneyDataCsvFileRead {
      * @return - SQL statement for creating a table as a String.
      */
     private static String sqlStatementForCreateTables(int quarterNumber) {
-        return "CREATE TABLE usageQ" + quarterNumber + " ( "
+        return "CREATE TABLE usageq" + quarterNumber + " ( "
                 + "id serial PRIMARY KEY, "
                 + "bikeId int, "
                 + "date date, "

@@ -66,7 +66,7 @@ public class StationNumbers {
 
     }
 
-    private static void getStationNameFromFile(Connection conn, String path, String folderName, int quarter) {
+    protected static void getStationNameFromFile(Connection conn, String path, String folderName, int quarter) {
 
         try (BufferedReader br = new BufferedReader(new FileReader(path))) {
             String line;
