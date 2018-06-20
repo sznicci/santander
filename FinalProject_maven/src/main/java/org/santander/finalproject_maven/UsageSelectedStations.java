@@ -14,8 +14,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Arrays;
-import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -27,7 +25,7 @@ public class UsageSelectedStations {
 
     static final int QUARTER = 4;
     static final String FILE_PATH = "K:\\NikolettaSzedljak\\finalProject\\"
-            + "preparingData\\santander\\docking-stations\\stationsToUse\\";
+            + "preparingData\\santander\\docking-stations\\stationsToUse\\all_StationNames.txt";
     static final String SQL_CREATE = "CREATE TABLE usage_selected_stations ( "
             + "id serial PRIMARY KEY, "
             + "bikeId int, "
@@ -35,12 +33,11 @@ public class UsageSelectedStations {
             + "start_time time, "
             + "end_time time, "
             + "start_station_id int, "
-            + "end_station_id int, "
-            + "category int "
+            + "end_station_id int "
             + ");";
     static final String SQL_INSERT = "INSERT INTO public.usage_selected_stations (\n"
-            + "bikeId, date, start_time, end_time, start_station_id, end_station_id, category)\n"
-            + "VALUES (?, ?, ?, ?, ?, ?, ?);";
+            + "bikeId, date, start_time, end_time, start_station_id, end_station_id)\n"
+            + "VALUES (?, ?, ?, ?, ?, ?);";
 
     static final String SQL_SELECT_FROM_OTHER_TABLE = "SELECT * FROM public.usageq" + QUARTER + "\n"
             + "WHERE start_station_id = (SELECT station_id\n"
@@ -48,7 +45,7 @@ public class UsageSelectedStations {
             + "	OR end_station_id = (SELECT station_id\n"
             + "	FROM public.dock_station_info where common_name = ?);";
 
-    protected static void insertSelectedStations(String stationName, Connection conn, int category) {
+    protected static void insertSelectedStations(String stationName, Connection conn) {
         try (PreparedStatement psSelect = conn.prepareStatement(SQL_SELECT_FROM_OTHER_TABLE);
                 PreparedStatement psInsert = conn.prepareStatement(SQL_INSERT)) {
 
@@ -66,7 +63,6 @@ public class UsageSelectedStations {
                 psInsert.setTime(4, rsSelect.getTime("end_time"));
                 psInsert.setInt(5, rsSelect.getInt("start_station_id"));
                 psInsert.setInt(6, rsSelect.getInt("end_station_id"));
-                psInsert.setInt(7, category);
                 // Insert into database
                 psInsert.addBatch();
                 psInsert.executeBatch();
@@ -79,29 +75,6 @@ public class UsageSelectedStations {
     }
 
     public static void main(String[] args) {
-
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("Please, select a folder (e.g.: less20, other, rails or tube): ");
-        String[] validInputs = {"less20", "other", "rails", "tube"};
-        String fileName;
-        if (!Arrays.asList(validInputs).contains(fileName = scanner.next())) {
-            throw new IllegalArgumentException("Typed word is not one of the valid ones "
-                    + "(e.g.: less20, other, rails or tube)");
-        }
-        
-        // Set category
-        int category;
-        switch (fileName) {
-            case "tube" : category = 1;
-                           break;
-            case "rails" : category = 2;
-                           break;
-            case "less20" : category = 3;
-                            break;
-            case "other" : category = 4;
-                           break;
-            default : category = -1;
-        }
 
         // Set up database connection
         DBConnection dbConn = new DBConnection();
@@ -118,11 +91,13 @@ public class UsageSelectedStations {
         }
 
         // Get station names from file
-        try (BufferedReader br = new BufferedReader(new FileReader(FILE_PATH + fileName + "_StationNames.txt"))) {
+        try (BufferedReader br = new BufferedReader(new FileReader(FILE_PATH))) {
             String line;
 
             while ((line = br.readLine()) != null) {
-                insertSelectedStations(line, conn, category);
+                if (! (line.equals("tube") || line.equals("rails") || line.equals("less20") || line.equals("other")) ) {
+                    insertSelectedStations(line, conn);
+                }
             }
         } catch (FileNotFoundException ex) {
             Logger.getLogger(StationNumbers.class.getName()).log(Level.SEVERE, null, ex);
