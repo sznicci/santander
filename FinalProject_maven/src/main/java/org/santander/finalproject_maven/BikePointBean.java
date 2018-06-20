@@ -22,11 +22,12 @@ public class BikePointBean {
     private AdditionalProperties additionalProperties;
     private Double latitude;
     private Double longitude;
+    private Integer category;
 
     public BikePointBean() {
     }
 
-    public BikePointBean(String id, Integer stationId, String url, String commonName, String placeType, AdditionalProperties additionalProperties, Double latitude, Double longitude) {
+    public BikePointBean(String id, Integer stationId, String url, String commonName, String placeType, AdditionalProperties additionalProperties, Double latitude, Double longitude, Integer category) {
         this.id = id;
         this.stationId = stationId;
         this.url = url;
@@ -35,6 +36,7 @@ public class BikePointBean {
         this.additionalProperties = additionalProperties;
         this.latitude = latitude;
         this.longitude = longitude;
+        this.category = category;
     }
 
     public String getId() {
@@ -99,6 +101,14 @@ public class BikePointBean {
 
     public void setLongitude(Double longitude) {
         this.longitude = longitude;
+    }
+
+    public Integer getCategory() {
+        return category;
+    }
+
+    public void setCategory(Integer category) {
+        this.category = category;
     }
     
 }

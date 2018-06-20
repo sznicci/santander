@@ -9,7 +9,7 @@ package org.santander.finalproject_maven;
  *
  * @author sznicci
  */
-class AdditionalProperties {
+public class AdditionalProperties {
     
     private String category;
     private String key;

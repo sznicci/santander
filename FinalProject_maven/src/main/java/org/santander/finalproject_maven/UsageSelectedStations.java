@@ -23,7 +23,7 @@ import java.util.logging.Logger;
  *
  * @author sznicci
  */
-public class SelectedStations {
+public class UsageSelectedStations {
 
     static final int QUARTER = 4;
     static final String FILE_PATH = "K:\\NikolettaSzedljak\\finalProject\\"
