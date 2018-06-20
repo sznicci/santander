@@ -23,7 +23,7 @@ import java.util.logging.Logger;
  */
 public class UsageSelectedStations {
 
-    static final int QUARTER = 4;
+    static final int QUARTER = 1;
     static final String FILE_PATH = "K:\\NikolettaSzedljak\\finalProject\\"
             + "preparingData\\santander\\docking-stations\\stationsToUse\\all_StationNames.txt";
     static final String SQL_CREATE = "CREATE TABLE usage_selected_stations ( "
