@@ -10,16 +10,26 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Time;
+import java.time.LocalDate;
+import java.time.Month;
+import java.time.Period;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  *
@@ -42,9 +52,13 @@ public class StatusTable {
             + "status int\n"
             + ");";
 
-    private static final String SQL_GET_STATION_ID = "SELECT station_id, category\n"
+    private static final String SQL_GET_STATION_ID = "SELECT station_id, capacity\n"
             + "FROM public.dock_station_info\n"
             + "WHERE common_name = ?;";
+
+    private static final String SQL_INSERT_GENERATED_VALUES = "INSERT INTO public.status(\n"
+            + "	station_id, date, \"time\", capacity)\n"
+            + "	VALUES (?, ?, ?, ?);";
 
     /**
      * Get selected station id from dock station info table
@@ -52,13 +66,12 @@ public class StatusTable {
      * @param conn
      * @return - station id if the selected station exists otherwise -1
      */
-    protected static TreeMap<Integer, Integer> getStationId(Connection conn) {
-        TreeMap<Integer, Integer> stationIds = new TreeMap<>();
+    protected static TreeMap<Integer, Integer> getStationIdAndCapacity(Connection conn) {
+        TreeMap<Integer, Integer> stationIdAndCapacity = new TreeMap<>();
 
         try (BufferedReader br = new BufferedReader(new FileReader(FILE_PATH));
                 PreparedStatement ps = conn.prepareStatement(SQL_GET_STATION_ID)) {
             String line;
-            int i = 0;
 
             while ((line = br.readLine()) != null) {
                 if (!(line.equals("tube") || line.equals("rails") || line.equals("less20") || line.equals("other"))) {
@@ -66,8 +79,7 @@ public class StatusTable {
 
                     ResultSet rs = ps.executeQuery();
                     rs.next();
-                    stationIds.put(rs.getInt("station_id"), rs.getInt("category"));
-                    i++;
+                    stationIdAndCapacity.put(rs.getInt("station_id"), rs.getInt("capacity"));
                 }
             }
         } catch (FileNotFoundException ex) {
@@ -78,7 +90,63 @@ public class StatusTable {
             Logger.getLogger(StatusTable.class.getName()).log(Level.SEVERE, null, ex);
         }
 
-        return stationIds;
+        return stationIdAndCapacity;
+    }
+
+    protected static List<Time> getTime() {
+        List<Time> timeList = new ArrayList<>();
+        for (int h = 0; h < 24; h++) {
+            for (int i = 0; i < 60; i++) {
+                timeList.add(new Time(h, i, 0));
+            }
+        }
+
+        return timeList;
+    }
+
+    /**
+     * Title: Get All Dates Between Two Dates source code Author: baeldung Date:
+     * 2018 Code version: 0 Availability:
+     * http://www.baeldung.com/java-between-dates
+     *
+     * @param startDate
+     * @param endDate
+     * @return
+     */
+    public static List<LocalDate> getDatesBetweenUsingJava8(
+            LocalDate startDate, LocalDate endDate) {
+
+        long numOfDaysBetween = ChronoUnit.DAYS.between(startDate, endDate);
+        return IntStream.iterate(0, i -> i + 1)
+                .limit(numOfDaysBetween)
+                .mapToObj(i -> startDate.plusDays(i))
+                .collect(Collectors.toList());
+    }
+
+    protected static void insertGeneratedValues(Connection conn, TreeMap<Integer, Integer> idAndCapacity, List<LocalDate> days, List<Time> timeList) {
+        try (PreparedStatement ps = conn.prepareStatement(SQL_INSERT_GENERATED_VALUES)) {
+
+            idAndCapacity.entrySet().forEach((e) -> {
+                try {
+                    ps.setInt(1, e.getKey());
+                    ps.setInt(4, e.getValue());
+
+                    for (int i = 0; i < days.size(); i++) {
+                        ps.setDate(2, Date.valueOf(days.get(i)));
+                        for (int j = 0; j < timeList.size(); j++) {
+                            ps.setTime(3, timeList.get(j));
+                            
+                            ps.execute();
+                        }
+                    }
+                    System.out.println("station ready" + System.nanoTime());
+                } catch (SQLException ex) {
+                    Logger.getLogger(StatusTable.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            });
+        } catch (SQLException ex) {
+            Logger.getLogger(StatusTable.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     public static void main(String[] args) {
@@ -86,18 +154,25 @@ public class StatusTable {
         DBConnection dbConn = new DBConnection();
         Connection conn = dbConn.connect();
 
-//        // Check wheter there is a table in the database for the selected quarter or not
-//        if (!DBConnection.hasTable(conn, "status")) {
-//
-//            try (Statement statement = conn.createStatement()) {
-//                statement.executeUpdate(SQL_CREATE_STATUS_TABLE);
-//            } catch (SQLException ex) {
-//                Logger.getLogger(DBConnection.class.getName()).log(Level.SEVERE, null, ex);
-//            }
-//        }
-        getStationId(conn).entrySet().forEach((e) -> {
-            System.out.println("stat id " + e.getKey() + " value " + e.getValue());
-        });
+        // Check wheter there is a table in the database for the selected quarter or not
+        if (!DBConnection.hasTable(conn, "status")) {
+
+            try (Statement statement = conn.createStatement()) {
+                statement.executeUpdate(SQL_CREATE_STATUS_TABLE);
+            } catch (SQLException ex) {
+                Logger.getLogger(DBConnection.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        
+        List<LocalDate> days = getDatesBetweenUsingJava8(LocalDate.of(2016, Month.DECEMBER, 28),
+                LocalDate.of(2018, Month.JANUARY, 3));
+
+        List<Time> timeList = getTime();
+        
+        TreeMap<Integer, Integer> idAndCapacity = getStationIdAndCapacity(conn);
+        
+        insertGeneratedValues(conn, idAndCapacity, days, timeList);
+
     }
 
 }
