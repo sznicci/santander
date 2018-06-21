@@ -60,6 +60,12 @@ public class StatusTable {
             + "	station_id, date, \"time\", capacity)\n"
             + "	VALUES (?, ?, ?, ?);";
 
+    private static final String SQL_SELECT_TAKEOUTS = "SELECT COUNT(id)\n"
+            + "	FROM public.usage_selected_stations\n"
+            + "	WHERE start_station_id = ? AND "
+            + " date = ? AND "
+            + " start_time = ?;";
+
     /**
      * Get selected station id from dock station info table
      *
@@ -123,6 +129,15 @@ public class StatusTable {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Insert first 4 columns into Status table
+     *
+     * @param conn
+     * @param idAndCapacity - selected station ids and their capacities in a
+     * TreeMap<Integer, Integer>
+     * @param days - days within a period in a List<Date>
+     * @param timeList - times within a day in a List<Time>
+     */
     protected static void insertGeneratedValues(Connection conn, TreeMap<Integer, Integer> idAndCapacity, List<LocalDate> days, List<Time> timeList) {
         try (PreparedStatement ps = conn.prepareStatement(SQL_INSERT_GENERATED_VALUES)) {
 
@@ -135,7 +150,7 @@ public class StatusTable {
                         ps.setDate(2, Date.valueOf(days.get(i)));
                         for (int j = 0; j < timeList.size(); j++) {
                             ps.setTime(3, timeList.get(j));
-                            
+
                             ps.execute();
                         }
                     }
@@ -149,30 +164,57 @@ public class StatusTable {
         }
     }
 
+    protected static void insertCalculatedValues(Connection conn) {
+
+    }
+
+    private static int takeouts(Connection conn, Integer startStationId, Date date, Time startTime) {
+        try (PreparedStatement ps = conn.prepareStatement(SQL_SELECT_TAKEOUTS)) {
+            ps.setInt(1, startStationId);
+            ps.setDate(2, date);
+            ps.setTime(3, startTime);
+            
+            ResultSet rs = ps.executeQuery();
+            rs.next();
+            
+            System.out.println(rs.getInt(1));
+            
+        } catch (SQLException ex) {
+            Logger.getLogger(StatusTable.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return -1;
+    }
+
     public static void main(String[] args) {
         // Set up database connection
         DBConnection dbConn = new DBConnection();
         Connection conn = dbConn.connect();
 
-        // Check wheter there is a table in the database for the selected quarter or not
-        if (!DBConnection.hasTable(conn, "status")) {
+//        // Check wheter there is a table in the database for the selected quarter or not
+//        if (!DBConnection.hasTable(conn, "status")) {
+//
+//            try (Statement statement = conn.createStatement()) {
+//                statement.executeUpdate(SQL_CREATE_STATUS_TABLE);
+//            } catch (SQLException ex) {
+//                Logger.getLogger(DBConnection.class.getName()).log(Level.SEVERE, null, ex);
+//            }
+//        }
 
-            try (Statement statement = conn.createStatement()) {
-                statement.executeUpdate(SQL_CREATE_STATUS_TABLE);
-            } catch (SQLException ex) {
-                Logger.getLogger(DBConnection.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
-        
-        List<LocalDate> days = getDatesBetweenUsingJava8(LocalDate.of(2016, Month.DECEMBER, 28),
-                LocalDate.of(2018, Month.JANUARY, 3));
+        takeouts(conn, new Integer(7), new Date(2017, 10, 8), new Time(0, 12, 0));
 
-        List<Time> timeList = getTime();
-        
-        TreeMap<Integer, Integer> idAndCapacity = getStationIdAndCapacity(conn);
-        
-        insertGeneratedValues(conn, idAndCapacity, days, timeList);
 
+//        // Generate dates 
+//        List<LocalDate> days = getDatesBetweenUsingJava8(LocalDate.of(2016, Month.DECEMBER, 28),
+//                LocalDate.of(2018, Month.JANUARY, 3));
+//
+//        // Generate times
+//        List<Time> timeList = getTime();
+//        
+//        // Get station ids and capacities
+//        TreeMap<Integer, Integer> idAndCapacity = getStationIdAndCapacity(conn);
+//        
+//        // Insert first 4 column into Status table
+//        insertGeneratedValues(conn, idAndCapacity, days, timeList);
     }
 
 }
