@@ -65,6 +65,12 @@ public class StatusTable {
             + "	WHERE start_station_id = ? AND "
             + " date = ? AND "
             + " start_time = ?;";
+    
+    private static final String SQL_SELECT_RETURNS = "SELECT COUNT(id)\n"
+            + "	FROM public.usage_selected_stations\n"
+            + "	WHERE end_station_id = ? AND "
+            + " date = ? AND "
+            + " end_time = ?;";
 
     /**
      * Get selected station id from dock station info table
@@ -170,6 +176,7 @@ public class StatusTable {
 
     private static int takeouts(Connection conn, Integer startStationId, Date date, Time startTime) {
         try (PreparedStatement ps = conn.prepareStatement(SQL_SELECT_TAKEOUTS)) {
+            
             ps.setInt(1, startStationId);
             ps.setDate(2, date);
             ps.setTime(3, startTime);
@@ -177,7 +184,25 @@ public class StatusTable {
             ResultSet rs = ps.executeQuery();
             rs.next();
             
-            System.out.println(rs.getInt(1));
+            return rs.getInt(1);
+            
+        } catch (SQLException ex) {
+            Logger.getLogger(StatusTable.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return -1;
+    }
+    
+    private static int returns(Connection conn, Integer endStationId, Date date, Time endTime) {
+        try (PreparedStatement ps = conn.prepareStatement(SQL_SELECT_RETURNS)) {
+            
+            ps.setInt(1, endStationId);
+            ps.setDate(2, date);
+            ps.setTime(3, endTime);
+            
+            ResultSet rs = ps.executeQuery();
+            rs.next();
+            
+            return rs.getInt(1);
             
         } catch (SQLException ex) {
             Logger.getLogger(StatusTable.class.getName()).log(Level.SEVERE, null, ex);
@@ -200,7 +225,8 @@ public class StatusTable {
 //            }
 //        }
 
-        takeouts(conn, new Integer(7), new Date(2017, 10, 8), new Time(0, 12, 0));
+        System.out.println(takeouts(conn, 7, new Date(2016-1900, 11, 28), new Time(11, 4, 0)));
+        System.out.println(returns(conn, 7, new Date(2016-1900, 11, 30), new Time(13, 16, 0)));
 
 
 //        // Generate dates 
