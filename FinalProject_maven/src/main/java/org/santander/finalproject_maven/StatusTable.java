@@ -30,6 +30,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import org.javatuples.Triplet;
+import org.javatuples.Tuple;
 
 /**
  *
@@ -65,12 +67,17 @@ public class StatusTable {
             + "	WHERE start_station_id = ? AND "
             + " date = ? AND "
             + " start_time = ?;";
-    
+
     private static final String SQL_SELECT_RETURNS = "SELECT COUNT(id)\n"
             + "	FROM public.usage_selected_stations\n"
             + "	WHERE end_station_id = ? AND "
             + " date = ? AND "
             + " end_time = ?;";
+
+    private static final String SQL_SELECT_STATION_ID_AND_CAPACITY = "SELECT DISTINCT(start_station_id), capacity\n"
+            + "	FROM public.usage_selected_stations, public.dock_station_info\n"
+            + "	WHERE start_station_id = station_id and category IS NOT NULL\n"
+            + "	order by start_station_id;";
 
     /**
      * Get selected station id from dock station info table
@@ -176,38 +183,51 @@ public class StatusTable {
 
     private static int takeouts(Connection conn, Integer startStationId, Date date, Time startTime) {
         try (PreparedStatement ps = conn.prepareStatement(SQL_SELECT_TAKEOUTS)) {
-            
+
             ps.setInt(1, startStationId);
             ps.setDate(2, date);
             ps.setTime(3, startTime);
-            
+            System.out.println("takeout " + ps);
+
             ResultSet rs = ps.executeQuery();
             rs.next();
-            
+
             return rs.getInt(1);
-            
+
         } catch (SQLException ex) {
             Logger.getLogger(StatusTable.class.getName()).log(Level.SEVERE, null, ex);
         }
         return -1;
     }
-    
+
     private static int returns(Connection conn, Integer endStationId, Date date, Time endTime) {
         try (PreparedStatement ps = conn.prepareStatement(SQL_SELECT_RETURNS)) {
-            
+
             ps.setInt(1, endStationId);
             ps.setDate(2, date);
             ps.setTime(3, endTime);
-            
+            System.out.println("return " + ps);
+
             ResultSet rs = ps.executeQuery();
             rs.next();
-            
+
             return rs.getInt(1);
-            
+
         } catch (SQLException ex) {
             Logger.getLogger(StatusTable.class.getName()).log(Level.SEVERE, null, ex);
         }
         return -1;
+    }
+
+    private static Triplet<Integer, Integer, Integer> available(Connection conn, Integer stationId, Integer capacity, Date date, Time time) {
+        int t = takeouts(conn, stationId, date, time);
+        int r = returns(conn, stationId, date, time);
+        Triplet<Integer, Integer, Integer> idAndCapacityAndAvalable = Triplet.with(stationId, capacity, capacity - t + r);
+
+        System.out.println("takeout " + t);
+        System.out.println("return " + r);
+        System.out.println("triplet " + idAndCapacityAndAvalable);
+        return idAndCapacityAndAvalable;
     }
 
     public static void main(String[] args) {
@@ -224,10 +244,9 @@ public class StatusTable {
 //                Logger.getLogger(DBConnection.class.getName()).log(Level.SEVERE, null, ex);
 //            }
 //        }
-
-        System.out.println(takeouts(conn, 7, new Date(2016-1900, 11, 28), new Time(11, 4, 0)));
-        System.out.println(returns(conn, 7, new Date(2016-1900, 11, 30), new Time(13, 16, 0)));
-
+        System.out.println(takeouts(conn, 7, new Date(2016 - 1900, 11, 28), new Time(11, 4, 0)));
+        System.out.println(returns(conn, 7, new Date(2016 - 1900, 11, 30), new Time(13, 16, 0)));
+        available(conn, 7, 16, new Date(2016 - 1900, 11, 30), new Time(13, 16, 0));
 
 //        // Generate dates 
 //        List<LocalDate> days = getDatesBetweenUsingJava8(LocalDate.of(2016, Month.DECEMBER, 28),
