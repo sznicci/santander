@@ -78,6 +78,8 @@ public class StatusTable {
             + "	FROM public.usage_selected_stations, public.dock_station_info\n"
             + "	WHERE start_station_id = station_id and category IS NOT NULL\n"
             + "	order by start_station_id;";
+    
+    private static final String SQL_INSERT_CALCULATED_VALUES = "";
 
     /**
      * Get selected station id from dock station info table
@@ -176,9 +178,37 @@ public class StatusTable {
             Logger.getLogger(StatusTable.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
+    
+    protected static void calculateDaily(Connection conn, Date date, int stationId, int capacity) {
+        int currentCapacity = capacity / 2; //availablity
+        List<Time> times = getTime();
+        int takeouts = 0;
+        int returns = 0;
+        
+        for (Time time : times) {
+            takeouts = takeouts(conn, stationId, date, time);
+            returns = returns(conn, stationId, date, time);
+            
+            currentCapacity = currentCapacity - takeouts + returns;
+            
+            System.out.println("time " + time);
+            System.out.println("station " + stationId + " currentCap/available " + currentCapacity 
+                    + " takeouts " + takeouts + " returns " + returns);
+            
+//            insertCalculatedValues(conn, stationId, currentcapacity, takeouts, returns, date, time);
+        }
+    }
 
-    protected static void insertCalculatedValues(Connection conn) {
-
+    protected static void insertCalculatedValues(Connection conn, int stationId, int currentCapacity, int takeouts, int returns, Date date, Time time) {
+        try (
+            PreparedStatement ps = conn.prepareStatement(SQL_INSERT_CALCULATED_VALUES)) {
+            
+            ps.setInt(1, stationId);
+            ps.setInt(2, currentCapacity);
+            
+        } catch (SQLException ex) {
+            Logger.getLogger(StatusTable.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     private static int takeouts(Connection conn, Integer startStationId, Date date, Time startTime) {
@@ -187,7 +217,7 @@ public class StatusTable {
             ps.setInt(1, startStationId);
             ps.setDate(2, date);
             ps.setTime(3, startTime);
-            System.out.println("takeout " + ps);
+//            System.out.println("takeout " + ps);
 
             ResultSet rs = ps.executeQuery();
             rs.next();
@@ -206,7 +236,7 @@ public class StatusTable {
             ps.setInt(1, endStationId);
             ps.setDate(2, date);
             ps.setTime(3, endTime);
-            System.out.println("return " + ps);
+//            System.out.println("return " + ps);
 
             ResultSet rs = ps.executeQuery();
             rs.next();
@@ -219,15 +249,15 @@ public class StatusTable {
         return -1;
     }
 
-    private static Triplet<Integer, Integer, Integer> available(Connection conn, Integer stationId, Integer capacity, Date date, Time time) {
+    private static Triplet<Integer, Integer, Integer> available(Connection conn, Integer stationId, Integer currentCapacity, Date date, Time time) {
         int t = takeouts(conn, stationId, date, time);
         int r = returns(conn, stationId, date, time);
-        Triplet<Integer, Integer, Integer> idAndCapacityAndAvalable = Triplet.with(stationId, capacity, capacity - t + r);
+        Triplet<Integer, Integer, Integer> idAndCapacityAndAvailable = Triplet.with(stationId, currentCapacity, currentCapacity - t + r);
 
         System.out.println("takeout " + t);
         System.out.println("return " + r);
-        System.out.println("triplet " + idAndCapacityAndAvalable);
-        return idAndCapacityAndAvalable;
+        System.out.println("triplet " + idAndCapacityAndAvailable);
+        return idAndCapacityAndAvailable;
     }
 
     public static void main(String[] args) {
@@ -244,9 +274,9 @@ public class StatusTable {
 //                Logger.getLogger(DBConnection.class.getName()).log(Level.SEVERE, null, ex);
 //            }
 //        }
-        System.out.println(takeouts(conn, 7, new Date(2016 - 1900, 11, 28), new Time(11, 4, 0)));
-        System.out.println(returns(conn, 7, new Date(2016 - 1900, 11, 30), new Time(13, 16, 0)));
-        available(conn, 7, 16, new Date(2016 - 1900, 11, 30), new Time(13, 16, 0));
+//        System.out.println(takeouts(conn, 7, new Date(2016 - 1900, 11, 28), new Time(11, 4, 0)));
+//        System.out.println(returns(conn, 7, new Date(2016 - 1900, 11, 30), new Time(13, 16, 0)));
+        calculateDaily(conn,  new Date(2017 - 1900, 5, 30), 7, 16);
 
 //        // Generate dates 
 //        List<LocalDate> days = getDatesBetweenUsingJava8(LocalDate.of(2016, Month.DECEMBER, 28),
