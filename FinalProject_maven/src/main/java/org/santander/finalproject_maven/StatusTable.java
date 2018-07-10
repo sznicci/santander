@@ -6,10 +6,8 @@
 package org.santander.finalproject_maven;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.Date;
@@ -81,7 +79,11 @@ public class StatusTable {
             + "	WHERE start_station_id = station_id and category IS NOT NULL\n"
             + "	order by start_station_id;";
 
-    private static final String SQL_INSERT_CALCULATED_VALUES = "";
+    private static final String SQL_UPDATE_CALCULATED_VALUES = "UPDATE public.status\n"
+            + "	SET takeout=?, returns=?\n"
+            + "	WHERE station_id = ? AND\n"
+            + "	date = ? AND\n"
+            + "	time = ?;";
 
     /**
      * Get selected station id from dock station info table
@@ -182,8 +184,10 @@ public class StatusTable {
     }
 
     protected static void calculateDaily(Connection conn, Date date, int stationId, int capacity) {
-        int currentCapacity = capacity / 2; //availablity
-        int initialCapacity = capacity / 2;
+//        int currentCapacity = 0; //availablity
+//        int initialCapacity = capacity / 2;
+//        int max = Integer.MIN_VALUE;
+//        int min = Integer.MAX_VALUE;
         List<Time> times = getTime();
         int takeouts = 0;
         int returns = 0;
@@ -191,36 +195,53 @@ public class StatusTable {
         for (Time time : times) {
             takeouts = takeouts(conn, stationId, date, time);
             returns = returns(conn, stationId, date, time);
+            insertCalculatedValues(conn, stationId, capacity, takeouts, returns, date, time);
 
-            currentCapacity = currentCapacity - takeouts + returns;
-            if (currentCapacity < 0) {
-                initialCapacity = initialCapacity + takeouts;
-                System.out.println("initial capacity after takouts " + initialCapacity);
-                System.out.println("currentCap + abs(50% - initialCap) " + (currentCapacity + Math.abs((capacity / 2) - initialCapacity)));
-            } else if (currentCapacity > capacity) {
-                initialCapacity = initialCapacity - returns;
-                System.out.println("initial capacity after returns " + initialCapacity);
-                System.out.println("currentCap - abs(50% - initialCap) " + (currentCapacity - Math.abs((capacity / 2) - initialCapacity)));
-            }
-
-            if (currentCapacity > capacity || currentCapacity < 0) {
-                System.out.println("time " + time);
-                System.out.println("station " + stationId + " currentCap/available " + currentCapacity
-                        + " takeouts " + takeouts + " returns " + returns);
-            }
-
+//            currentCapacity = currentCapacity - takeouts + returns;
+//            if (max < currentCapacity)
+//                max = currentCapacity;
+//            if (min > currentCapacity)
+//                min = currentCapacity;
+//            if (currentCapacity < 0) {
+//                initialCapacity = initialCapacity + takeouts;
+//                System.out.println("initial capacity after takouts " + initialCapacity);
+//                System.out.println("currentCap + abs(50% - initialCap) " + (currentCapacity + Math.abs((capacity / 2) - initialCapacity)));
+//            } else if (currentCapacity > capacity) {
+//                initialCapacity = initialCapacity - returns;
+//                System.out.println("initial capacity after returns " + initialCapacity);
+//                System.out.println("currentCap - abs(50% - initialCap) " + (currentCapacity - Math.abs((capacity / 2) - initialCapacity)));
+//            }
+//            if (currentCapacity > capacity || currentCapacity < 0) {
+//                System.out.println("time " + time);
+//                System.out.println("station " + stationId + " currentCap/available " + currentCapacity
+//                        + " takeouts " + takeouts + " returns " + returns);
+//            }
 //            insertCalculatedValues(conn, stationId, currentcapacity, takeouts, returns, date, time);
         }
-        System.out.println("daily current capacity " + currentCapacity);
-        System.out.println("daily initial capacity " + initialCapacity + "\n");
+//        System.out.println("min " + min);
+//        System.out.println("max " + max);
+//        System.out.println("max + min " + (max + min));        
+//        System.out.println("capacity " + capacity);
+//        System.out.println("difference " + Math.abs(capacity - Math.abs(max + min)));
+//        int percentage = ((((capacity - Math.abs(max + min))) * 100) / capacity);
+//        System.out.println("percentage for capacity and difference " + percentage + "%");
+//        if (percentage < 0) {
+//            System.out.println("WARNING!!!");
+//        }
+//        System.out.println("daily initial capacity " + initialCapacity + "\n");
     }
 
     protected static void insertCalculatedValues(Connection conn, int stationId, int currentCapacity, int takeouts, int returns, Date date, Time time) {
         try (
-                PreparedStatement ps = conn.prepareStatement(SQL_INSERT_CALCULATED_VALUES)) {
+                PreparedStatement ps = conn.prepareStatement(SQL_UPDATE_CALCULATED_VALUES)) {
 
-            ps.setInt(1, stationId);
-            ps.setInt(2, currentCapacity);
+            ps.setInt(1, takeouts);
+            ps.setInt(2, returns);
+            ps.setInt(3, stationId);
+            ps.setDate(4, date);
+            ps.setTime(5, time);
+            
+            ps.execute();
 
         } catch (SQLException ex) {
             Logger.getLogger(StatusTable.class.getName()).log(Level.SEVERE, null, ex);
@@ -281,33 +302,47 @@ public class StatusTable {
         DBConnection dbConn = new DBConnection();
         Connection conn = dbConn.connect();
 
-//        // Check wheter there is a table in the database for the selected quarter or not
-//        if (!DBConnection.hasTable(conn, "status")) {
-//
-//            try (Statement statement = conn.createStatement()) {
-//                statement.executeUpdate(SQL_CREATE_STATUS_TABLE);
-//            } catch (SQLException ex) {
-//                Logger.getLogger(DBConnection.class.getName()).log(Level.SEVERE, null, ex);
-//            }
-//        }
+        // Check wheter there is a table in the database for the selected quarter or not
+        if (!DBConnection.hasTable(conn, "status")) {
+
+            try (Statement statement = conn.createStatement()) {
+                statement.executeUpdate(SQL_CREATE_STATUS_TABLE);
+            } catch (SQLException ex) {
+                Logger.getLogger(DBConnection.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
 //        System.out.println(takeouts(conn, 7, new Date(2016 - 1900, 11, 28), new Time(11, 4, 0)));
 //        System.out.println(returns(conn, 7, new Date(2016 - 1900, 11, 30), new Time(13, 16, 0)));
-        List<LocalDate> janMonth = getDatesBetweenUsingJava8(LocalDate.of(2017, Month.JANUARY, 1), LocalDate.of(2017, Month.JANUARY, 31));
-        TreeMap<Integer, Integer> station = new TreeMap<>();
-        station.put(410, 64);
-        station.put(732, 21);
-        station.put(798, 27);
-        station.put(784, 34);
+//        List<LocalDate> janMonth = getDatesBetweenUsingJava8(LocalDate.of(2017, Month.JANUARY, 1), LocalDate.of(2017, Month.JANUARY, 31));
+        TreeMap<Integer, Integer> station = getStationIdAndCapacity(conn);
+//        station.put(410, 64);
+//        station.put(732, 21);
+//        station.put(798, 27);
+//        station.put(784, 34);
+
+        List<LocalDate> allMonth = getDatesBetweenUsingJava8(LocalDate.of(2016, Month.DECEMBER, 28),
+                LocalDate.of(2018, Month.JANUARY, 2));
 
         for (Map.Entry<Integer, Integer> entry : station.entrySet()) {
-            System.out.println("station " + entry.getKey() + " capacity " + entry.getValue());
-            janMonth.forEach((janDate) -> {
-                System.out.println("day " + janDate);
-                calculateDaily(conn, Date.valueOf(janDate), entry.getKey(), entry.getValue());
+            System.out.println("station " + entry.getKey() + " capacity " + entry.getValue() + "\n");
+            allMonth.forEach((allDate) -> {
+                System.out.println("day " + allDate);
+                calculateDaily(conn, Date.valueOf(allDate), entry.getKey(), entry.getValue());
+                System.out.println("\n");
             });
         }
 
-//        calculateDaily(conn, new Date(2017-1900, 0, 9), 410, 97);
+//        System.out.println("conn, new Date(2017-1900, 0, 26), 251, 34");
+//        calculateDaily(conn, new Date(2017-1900, 0, 26), 251, 34);
+//        System.out.println("\n");
+//        System.out.println("conn, new Date(2017-1900, 0,9), 410, 64");
+//        calculateDaily(conn, new Date(2017-1900, 0, 9), 410, 64);
+//        System.out.println("\n");
+//        System.out.println("conn, new Date(2017-1900, 0, 13), 732, 21");
+//        calculateDaily(conn, new Date(2017-1900, 0, 13), 732, 21);
+//        System.out.println("\n");
+//        System.out.println("conn, new Date(2017-1900, 0, 16), 798, 27");
+//        calculateDaily(conn, new Date(2017-1900, 0, 16), 798, 27);
 
 //        // Generate dates 
 //        List<LocalDate> days = getDatesBetweenUsingJava8(LocalDate.of(2016, Month.DECEMBER, 28),
@@ -315,10 +350,10 @@ public class StatusTable {
 //
 //        // Generate times
 //        List<Time> timeList = getTime();
-//        
+//
 //        // Get station ids and capacities
 //        TreeMap<Integer, Integer> idAndCapacity = getStationIdAndCapacity(conn);
-//        
+//
 //        // Insert first 4 column into Status table
 //        insertGeneratedValues(conn, idAndCapacity, days, timeList);
     }
