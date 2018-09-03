@@ -3,7 +3,6 @@ import java.util.ArrayList;
 
 public class UpdateStatusCalculation {
 
-//    static final String CSV_FILENAME = "G:\\ARU\\Modules\\Semester3_FinalProject\\all_data\\status_practice2_withoutStatus.csv";
     private static final int TAKEOUT_RED = 1;
     private static final int TAKEOUT_AMBER = 2;
     private static final int TAKEOUT_BLUE = 3;
@@ -18,20 +17,14 @@ public class UpdateStatusCalculation {
     private static final double THIRD_BOUNDARY = 0.5;
     private static final double FOURTH_BOUNDARY = 0.75;
 
-    private static final String UPDATE_TABLE_WITH_STATUS_TAKEOUT = "UPDATE public.status_practice2\n" +
+    private static final String UPDATE_TABLE_WITH_STATUS_TAKEOUT = "UPDATE public.status\n" +
             "\tSET status_takeouts = ?, status_returns = ?\n" +
             "\tWHERE station_id = ?\n" +
             "\tAND date = ? \n" +
             "\tAND time = ?;";
 
-    private static final String UPDATE_TABLE_WITH_STATUS_RETURN = "UPDATE public.status_practice2\n" +
-            "\tSET status_returns = ?\n" +
-            "\tWHERE station_id = ?\n" +
-            "\tAND date = ? \n" +
-            "\tAND time = ?;";
-
     private static final String SELECT_AVAILABLES = "SELECT station_id, date, \"time\", capacity, available\n" +
-            "\tFROM public.status_practice2;";
+            "\tFROM public.status;";
 
     public static void main(String[] args) {
         // Set up database connection
