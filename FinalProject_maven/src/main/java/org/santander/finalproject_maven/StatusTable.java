@@ -3,7 +3,6 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.santander.finalproject_maven;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -30,28 +29,27 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
 import org.javatuples.Triplet;
 import org.javatuples.Tuple;
 
 /**
- *
  * @author sznicci
  */
 public class StatusTable {
 
-    private static final String FILE_PATH = "K:\\NikolettaSzedljak\\finalProject\\"
-            + "preparingData\\santander\\docking-stations\\stationsToUse\\all_StationNames.txt";
+    private static final String FILE_PATH = "G:\\all_StationNames.txt";
 
     private static final String SQL_CREATE_STATUS_TABLE = "CREATE TABLE status (\n"
-            + "id serial PRIMARY KEY,\n"
-            + "station_id int,\n"
-            + "date date,\n"
-            + "time time,\n"
-            + "capacity int,\n"
-            + "takeout int,\n"
-            + "returns int,\n"
-            + "available int,\n"
-            + "status int\n"
+            + "station_id integer NOT NULL,\n"
+            + "date date NOT NULL,\n"
+            + "\"time\" time without time zone NOT NULL,\n"
+            + "capacity integer,\n"
+            + "takeouts integer,\n"
+            + "returns integer,\n"
+            + "available integer,\n"
+            + "status integer,\n"
+            + "CONSTRAINT status_pkey PRIMARY KEY (station_id, date, \"time\")"
             + ");";
 
     private static final String SQL_GET_STATION_ID = "SELECT station_id, capacity\n"
@@ -80,10 +78,32 @@ public class StatusTable {
             + "	order by start_station_id;";
 
     private static final String SQL_UPDATE_CALCULATED_VALUES = "UPDATE public.status\n"
-            + "	SET takeout=?, returns=?\n"
+            + "	SET takeouts=?, returns=?\n"
             + "	WHERE station_id = ? AND\n"
             + "	date = ? AND\n"
             + "	time = ?;";
+
+    private static final String SQL_INSERT_TAKEOUT_VALUES = "INSERT INTO public.status (" +
+            " station_id, date, \"time\", takeouts)\n" +
+            "\tSELECT start_station_id, date, start_time, count(start_time) as takeouts\n" +
+            "\tFROM public.usage_selected_stations\n" +
+            "\tWHERE start_station_id = ?\n" +
+            "\tGROUP BY start_station_id, start_time, date\n" +
+            "\tORDER BY date, start_time;";
+
+    private static final String SQL_INSERT_CAPACITY = "UPDATE public.status \n" +
+            "\tSET capacity = ?\n" +
+            "\tWHERE station_id = ?;";
+
+    private static final String SQL_UPSERT_RETURNS = "INSERT INTO public.status (station_id, date, time, returns)\n" +
+            "(SELECT end_station_id, date, end_time, count(end_time) as returns\n" +
+            "FROM public.usage_selected_stations\n" +
+            "WHERE end_station_id = ?\n" +
+            "GROUP BY end_station_id, end_time, date\n" +
+            "ORDER BY date, end_time)\n" +
+            "ON CONFLICT (station_id, date, time)\n" +
+            "DO UPDATE \n" +
+            "SET returns = excluded.returns;";
 
     /**
      * Get selected station id from dock station info table
@@ -95,7 +115,7 @@ public class StatusTable {
         TreeMap<Integer, Integer> stationIdAndCapacity = new TreeMap<>();
 
         try (BufferedReader br = new BufferedReader(new FileReader(FILE_PATH));
-                PreparedStatement ps = conn.prepareStatement(SQL_GET_STATION_ID)) {
+             PreparedStatement ps = conn.prepareStatement(SQL_GET_STATION_ID)) {
             String line;
 
             while ((line = br.readLine()) != null) {
@@ -153,9 +173,9 @@ public class StatusTable {
      *
      * @param conn
      * @param idAndCapacity - selected station ids and their capacities in a
-     * TreeMap<Integer, Integer>
-     * @param days - days within a period in a List<Date>
-     * @param timeList - times within a day in a List<Time>
+     *                      TreeMap<Integer, Integer>
+     * @param days          - days within a period in a List<Date>
+     * @param timeList      - times within a day in a List<Time>
      */
     protected static void insertGeneratedValues(Connection conn, TreeMap<Integer, Integer> idAndCapacity, List<LocalDate> days, List<Time> timeList) {
         try (PreparedStatement ps = conn.prepareStatement(SQL_INSERT_GENERATED_VALUES)) {
@@ -173,7 +193,6 @@ public class StatusTable {
                             ps.execute();
                         }
                     }
-                    System.out.println("station ready" + System.nanoTime());
                 } catch (SQLException ex) {
                     Logger.getLogger(StatusTable.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -195,7 +214,7 @@ public class StatusTable {
         for (Time time : times) {
             takeouts = takeouts(conn, stationId, date, time);
             returns = returns(conn, stationId, date, time);
-            insertCalculatedValues(conn, stationId, capacity, takeouts, returns, date, time);
+//            insertCalculatedValues(conn, stationId, capacity, takeouts, returns, date, time);
 
 //            currentCapacity = currentCapacity - takeouts + returns;
 //            if (max < currentCapacity)
@@ -231,17 +250,21 @@ public class StatusTable {
 //        System.out.println("daily initial capacity " + initialCapacity + "\n");
     }
 
-    protected static void insertCalculatedValues(Connection conn, int stationId, int currentCapacity, int takeouts, int returns, Date date, Time time) {
+    protected static void insertCalculatedValues(Connection conn, int stationId, int capacity) {
         try (
-                PreparedStatement ps = conn.prepareStatement(SQL_UPDATE_CALCULATED_VALUES)) {
+                PreparedStatement ps = conn.prepareStatement(SQL_INSERT_TAKEOUT_VALUES);
+                PreparedStatement ps2 = conn.prepareStatement(SQL_INSERT_CAPACITY);
+                PreparedStatement ps3 = conn.prepareStatement(SQL_UPSERT_RETURNS)) {
 
-            ps.setInt(1, takeouts);
-            ps.setInt(2, returns);
-            ps.setInt(3, stationId);
-            ps.setDate(4, date);
-            ps.setTime(5, time);
-            
+            ps.setInt(1, stationId);
             ps.execute();
+
+            ps3.setInt(1, stationId);
+            ps3.execute();
+
+            ps2.setInt(1, capacity);
+            ps2.setInt(2, stationId);
+            ps2.execute();
 
         } catch (SQLException ex) {
             Logger.getLogger(StatusTable.class.getName()).log(Level.SEVERE, null, ex);
@@ -320,16 +343,12 @@ public class StatusTable {
 //        station.put(798, 27);
 //        station.put(784, 34);
 
-        List<LocalDate> allMonth = getDatesBetweenUsingJava8(LocalDate.of(2016, Month.DECEMBER, 28),
-                LocalDate.of(2018, Month.JANUARY, 2));
-
+//        List<LocalDate> allMonth = getDatesBetweenUsingJava8(LocalDate.of(2016, Month.DECEMBER, 28),
+//                LocalDate.of(2018, Month.JANUARY, 2));
+//
         for (Map.Entry<Integer, Integer> entry : station.entrySet()) {
             System.out.println("station " + entry.getKey() + " capacity " + entry.getValue() + "\n");
-            allMonth.forEach((allDate) -> {
-                System.out.println("day " + allDate);
-                calculateDaily(conn, Date.valueOf(allDate), entry.getKey(), entry.getValue());
-                System.out.println("\n");
-            });
+            insertCalculatedValues(conn, entry.getKey(), entry.getValue());
         }
 
 //        System.out.println("conn, new Date(2017-1900, 0, 26), 251, 34");
