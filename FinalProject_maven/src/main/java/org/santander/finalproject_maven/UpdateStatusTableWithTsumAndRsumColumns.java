@@ -8,7 +8,11 @@ public class UpdateStatusTableWithTsumAndRsumColumns {
 
     private static final Double UPPER_BOUND = 0.75;
 
-    private static final String UPDATE_STATUS_TABLE = "UPDATE public.status_practice1\n" +
+    private static final String ALTER_STATUS_TABLE = "ALTER TABLE public.status\n" +
+            "    ADD COLUMN IF NOT EXISTS t_sum integer,\n" +
+            "\tADD COLUMN IF NOT EXISTS r_sum integer;";
+
+    private static final String UPDATE_STATUS_TABLE = "UPDATE public.status\n" +
             "\tSET t_sum=calc.t_sum, r_sum=calc.r_sum\n" +
             "\t\n" +
             "\tFROM (\n" +
@@ -16,45 +20,45 @@ public class UpdateStatusTableWithTsumAndRsumColumns {
             "\tSUM(takeouts) over (ORDER BY station_id, date, time) as t_sum,\n" +
             "\tSUM(returns) over (ORDER BY station_id, date, time) as r_sum\n" +
             "\n" +
-            "\tFROM public.status_practice1\n" +
-            "\tWHERE\tpublic.status_practice1.station_id = ?\n" +
-            "\t\tAND public.status_practice1.date = ?" +
+            "\tFROM public.status\n" +
+            "\tWHERE\tpublic.status.station_id = ?\n" +
+            "\t\tAND public.status.date = ?" +
             "\tGROUP BY station_id, date, time, capacity, takeouts, returns\n" +
             "\t) as calc\n" +
             "\t\n" +
-            "\tWHERE public.status_practice1.station_id = calc.station_id AND public.status_practice1.date = calc.date \n" +
-            "\tAND public.status_practice1.time = calc.time\n" +
+            "\tWHERE public.status.station_id = calc.station_id AND public.status.date = calc.date \n" +
+            "\tAND public.status.time = calc.time\n" +
             "\t;";
 
     private static final String SELECT_LIMITH_TSUM_RSUM = "SELECT t_sum, r_sum FROM \n" +
-            "\tpublic.status_practice1\n" +
+            "\tpublic.status\n" +
             "\t\twhere station_id = ?\n" +
             "\t\tAND date = ?" +
             "\t\tORDER BY date DESC, time DESC\n" +
             "\t\tLIMIT ?;";
 
     private static final String SELECT_TAKEOUTS_RETURNS = "SELECT takeouts, returns \n" +
-            "FROM  public.status_practice1\n" +
+            "FROM  public.status\n" +
             "\t\twhere station_id = ?\n" +
             "\t\tand date = ?\n" +
             "\t\tORDER BY date, time;";
 
     private static final String SELECT_TSUM_RSUM_WHEN_LESS_MOVEMENTS = "SELECT t_sum, r_sum \n" +
-            "FROM  public.status_practice1\n" +
+            "FROM  public.status\n" +
             "\t\twhere station_id = ?\n" +
             "\t\tand date = ?\n" +
             "\t\tORDER BY date desc, time desc;";
 
-    public static final String UPDATE_AVAILABLE_COLUMN_PER_DAY = "UPDATE public.status_practice1\n" +
+    public static final String UPDATE_AVAILABLE_COLUMN_PER_DAY = "UPDATE public.status\n" +
             "\tSET available = daily.ava\n" +
             "\tFROM (VALUES " +
             "(?, ?, to_date(?, 'yyyy-mm-dd'), CAST(? as time)) ) as daily (ava, station_id, date, time)\n" +
-            "\tWHERE public.status_practice1.station_id = daily.station_id\n" +
-            "\tAND public.status_practice1.date = daily.date\n" +
-            "\tAND public.status_practice1.time = daily.time;";
+            "\tWHERE public.status.station_id = daily.station_id\n" +
+            "\tAND public.status.date = daily.date\n" +
+            "\tAND public.status.time = daily.time;";
 
     private static final String SELECT_TIMES = "SELECT \"time\"\n" +
-            "\tFROM public.status_practice1" +
+            "\tFROM public.status" +
             "\tWHERE date = ?" +
             "\tAND station_id = ?;";
 
@@ -201,8 +205,8 @@ public class UpdateStatusTableWithTsumAndRsumColumns {
             // if result is not null
             if (rs.next()) {
                 if (rs.getInt(1) == rs.getInt(2)) { // if last ones are equal -> insert the next bigger one
-                    rs.next();
-                    initialStatesForDay.add((rs.getInt(1) > rs.getInt(2)) ? capacity : 0);
+                    if (rs.next())
+                        initialStatesForDay.add((rs.getInt(1) > rs.getInt(2)) ? capacity : 0);
                 } else { // if last ones are not equal
                     initialStatesForDay.add((rs.getInt(1) > rs.getInt(2)) ? capacity : 0);
                 }
@@ -254,6 +258,13 @@ public class UpdateStatusTableWithTsumAndRsumColumns {
         DBConnection dbConn = new DBConnection();
         Connection conn = dbConn.connect();
 
+        try {
+            PreparedStatement s = conn.prepareStatement(ALTER_STATUS_TABLE);
+             s.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
         TreeMap<Integer, Integer> stations = StatusTable.getStationIdAndCapacity(conn);
         List<LocalDate> allDays = StatusTable.getDatesBetweenUsingJava8(
                 LocalDate.of(2017, Month.JANUARY, 1),
@@ -262,6 +273,8 @@ public class UpdateStatusTableWithTsumAndRsumColumns {
         for (Map.Entry<Integer, Integer> station : stations.entrySet()) {
             calculateAndUpdateAvailability(conn, station.getKey(), station.getValue(), allDays);
         }
+
+        updateStatusTableWithTsumAndRsumColumns(conn, stations, allDays);
 
     }
 
