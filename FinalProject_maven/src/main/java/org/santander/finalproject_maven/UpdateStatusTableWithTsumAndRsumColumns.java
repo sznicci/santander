@@ -270,11 +270,11 @@ public class UpdateStatusTableWithTsumAndRsumColumns {
                 LocalDate.of(2017, Month.JANUARY, 1),
                 LocalDate.of(2018, Month.JANUARY, 1));
 
+        updateStatusTableWithTsumAndRsumColumns(conn, stations, allDays);
+        
         for (Map.Entry<Integer, Integer> station : stations.entrySet()) {
             calculateAndUpdateAvailability(conn, station.getKey(), station.getValue(), allDays);
         }
-
-        updateStatusTableWithTsumAndRsumColumns(conn, stations, allDays);
 
     }
 
