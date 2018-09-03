@@ -9,19 +9,12 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Time;
 import java.time.LocalDate;
-import java.time.Month;
-import java.time.Period;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -29,9 +22,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
-import org.javatuples.Triplet;
-import org.javatuples.Tuple;
 
 /**
  * @author sznicci
@@ -55,22 +45,6 @@ public class StatusTable {
     private static final String SQL_GET_STATION_ID = "SELECT station_id, capacity\n"
             + "FROM public.dock_station_info\n"
             + "WHERE common_name = ?;";
-
-    private static final String SQL_INSERT_GENERATED_VALUES = "INSERT INTO public.status(\n"
-            + "	station_id, date, \"time\", capacity)\n"
-            + "	VALUES (?, ?, ?, ?);";
-
-    private static final String SQL_SELECT_TAKEOUTS = "SELECT COUNT(id)\n"
-            + "	FROM public.usage_selected_stations\n"
-            + "	WHERE start_station_id = ? AND "
-            + " date = ? AND "
-            + " start_time = ?;";
-
-    private static final String SQL_SELECT_RETURNS = "SELECT COUNT(id)\n"
-            + "	FROM public.usage_selected_stations\n"
-            + "	WHERE end_station_id = ? AND "
-            + " date = ? AND "
-            + " end_time = ?;";
 
     private static final String SQL_INSERT_TAKEOUT_VALUES = "INSERT INTO public.status (" +
             " station_id, date, \"time\", takeouts)\n" +
@@ -127,17 +101,6 @@ public class StatusTable {
         return stationIdAndCapacity;
     }
 
-    protected static List<Time> getTime() {
-        List<Time> timeList = new ArrayList<>();
-        for (int h = 0; h < 24; h++) {
-            for (int i = 0; i < 60; i++) {
-                timeList.add(new Time(h, i, 0));
-            }
-        }
-
-        return timeList;
-    }
-
     /**
      * Title: Get All Dates Between Two Dates source code Author: baeldung Date:
      * 2018 Code version: 0 Availability:
@@ -155,40 +118,6 @@ public class StatusTable {
                 .limit(numOfDaysBetween)
                 .mapToObj(i -> startDate.plusDays(i))
                 .collect(Collectors.toList());
-    }
-
-    /**
-     * Insert first 4 columns into Status table
-     *
-     * @param conn
-     * @param idAndCapacity - selected station ids and their capacities in a
-     *                      TreeMap<Integer, Integer>
-     * @param days          - days within a period in a List<Date>
-     * @param timeList      - times within a day in a List<Time>
-     */
-    protected static void insertGeneratedValues(Connection conn, TreeMap<Integer, Integer> idAndCapacity, List<LocalDate> days, List<Time> timeList) {
-        try (PreparedStatement ps = conn.prepareStatement(SQL_INSERT_GENERATED_VALUES)) {
-
-            idAndCapacity.entrySet().forEach((e) -> {
-                try {
-                    ps.setInt(1, e.getKey());
-                    ps.setInt(4, e.getValue());
-
-                    for (int i = 0; i < days.size(); i++) {
-                        ps.setDate(2, Date.valueOf(days.get(i)));
-                        for (int j = 0; j < timeList.size(); j++) {
-                            ps.setTime(3, timeList.get(j));
-
-                            ps.execute();
-                        }
-                    }
-                } catch (SQLException ex) {
-                    Logger.getLogger(StatusTable.class.getName()).log(Level.SEVERE, null, ex);
-                }
-            });
-        } catch (SQLException ex) {
-            Logger.getLogger(StatusTable.class.getName()).log(Level.SEVERE, null, ex);
-        }
     }
 
     protected static void insertCalculatedValues(Connection conn, int stationId, int capacity) {
@@ -210,55 +139,6 @@ public class StatusTable {
         } catch (SQLException ex) {
             Logger.getLogger(StatusTable.class.getName()).log(Level.SEVERE, null, ex);
         }
-    }
-
-    private static int takeouts(Connection conn, Integer startStationId, Date date, Time startTime) {
-        try (PreparedStatement preparedStatement = conn.prepareStatement(SQL_SELECT_TAKEOUTS)) {
-
-            preparedStatement.setInt(1, startStationId);
-            preparedStatement.setDate(2, date);
-            preparedStatement.setTime(3, startTime);
-//            System.out.println("takeout " + ps);
-
-            ResultSet rs = preparedStatement.executeQuery();
-            rs.next();
-
-            return rs.getInt(1);
-
-        } catch (SQLException ex) {
-            Logger.getLogger(StatusTable.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        return -1;
-    }
-
-    private static int returns(Connection conn, Integer endStationId, Date date, Time endTime) {
-        try (PreparedStatement ps = conn.prepareStatement(SQL_SELECT_RETURNS)) {
-
-            ps.setInt(1, endStationId);
-            ps.setDate(2, date);
-            ps.setTime(3, endTime);
-//            System.out.println("return " + ps);
-
-            ResultSet rs = ps.executeQuery();
-            rs.next();
-
-            return rs.getInt(1);
-
-        } catch (SQLException ex) {
-            Logger.getLogger(StatusTable.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        return -1;
-    }
-
-    private static Triplet<Integer, Integer, Integer> available(Connection conn, Integer stationId, Integer currentCapacity, Date date, Time time) {
-        int t = takeouts(conn, stationId, date, time);
-        int r = returns(conn, stationId, date, time);
-        Triplet<Integer, Integer, Integer> idAndCapacityAndAvailable = Triplet.with(stationId, currentCapacity, currentCapacity - t + r);
-
-        System.out.println("takeout " + t);
-        System.out.println("return " + r);
-        System.out.println("triplet " + idAndCapacityAndAvailable);
-        return idAndCapacityAndAvailable;
     }
 
     public static void main(String[] args) {
